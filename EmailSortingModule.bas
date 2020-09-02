@@ -1,4 +1,3 @@
-Attribute VB_Name = "Module1"
 Option Explicit
 
 
@@ -22,19 +21,26 @@ Public Sub SetDomain()
     Dim i As Long, j As Long
     Dim strFolder As String
     Dim vAddr As Variant
-
     Dim contactFolder As Outlook.MAPIFolder
+    Dim colRules As Outlook.Rules
+    Dim oRule As Outlook.Rule
+    Dim colRuleActions As Outlook.RuleActions
+    Dim oMoveRuleAction As Outlook.MoveOrCopyRuleAction
+    Dim oFromCondition As Outlook.ToOrFromRuleCondition
+    Dim oExceptSubject As Outlook.TextRuleCondition
+    Dim oMoveTarget As Outlook.Folder
+    Dim myRecipient As Outlook.Recipient
+    Dim xlApp As Excel.Application
+    Dim xlSht As Excel.Worksheet
+   
     Set currentExplorer = Application.ActiveExplorer
     Set Selection = currentExplorer.Selection
-   
+
+
     On Error Resume Next
     
     
-
-  
-    
     Set contactFolder = Session.GetDefaultFolder(olFolderContacts)
-
     For Each obj In Selection
          Set objMail = obj
          
@@ -42,28 +48,57 @@ Public Sub SetDomain()
          Set objProp = objMail.UserProperties.Add("Domain", olText, True)
          objProp.Value = strDomain
         objMail.Save
-        
 
-'List the e-mail addresses to move each separated by "|"
-
-    Debug.Print objProp
+    
+    
   If objProp = "gmail.com" Or objProp = "hotmail.com" Or objProp = "yahoo.com" Or objProp = "shaw.ca" Or objProp = "aol.com" Or objProp = "telus.com" Then
     Else
   Set myNameSpace = myOlApp.GetNamespace("MAPI")
-  Set myFolder = myNameSpace.GetDefaultFolder(olFolderInbox)
+  Set myRecipient = myNameSpace.CreateRecipient("<YOUR EMAIL OR SHARED MAILBOX HERE>")
+  Set myFolder = myNameSpace.GetSharedDefaultFolder(myRecipient, olFolderInbox)
   Set myDomainFolder = myFolder.Folders.Add(objProp)
-    
+ 
+  
     vAddr = Split(objMail.SenderEmailAddress, "|")
     strFolder = objProp
     Set myOlSel = currentExplorer.Selection
-    Set olItems = Session.GetDefaultFolder(olFolderInbox).Items
-    For i = olItems.Count To 1 Step -1        'Check each message in reverse order
+    Set olItems = Session.GetSharedDefaultFolder(myRecipient, olFolderInbox).Items
+    
+    For i = olItems.Count To 1 Step -1
         Set olItem = olItems(i)
-        For j = 0 To UBound(vAddr)        'Compare the sender e-mail address with the items in the list
+        For j = 0 To UBound(vAddr)
             If LCase(olItem.SenderEmailAddress) = LCase(vAddr(j)) Then
-                'If a match then move the 'Info' subfolder of Inbox
-                olItem.Move Session.GetDefaultFolder(olFolderInbox).Folders(strFolder)
-                     
+                olItem.Move Session.GetSharedDefaultFolder(myRecipient, olFolderInbox).Folders(strFolder)
+
+
+ 
+ Set oMoveTarget = myFolder.Folders(strDomain)
+ Set colRules = Application.Session.DefaultStore.GetRules()
+ Set oRule = colRules.Create(objProp + " " + "rule", olRuleReceive)
+ Set oFromCondition = oRule.Conditions.From
+
+ If oRule <> objProp Then Debug.Print "cats"
+    Else
+ With oFromCondition
+ .Enabled = True
+ 
+ .Recipients.Add (olItem.SenderEmailAddress)
+ 
+ .Recipients.ResolveAll
+ 
+ End With
+ 
+ Set oMoveRuleAction = oRule.Actions.MoveToFolder
+ With oMoveRuleAction
+ 
+ .Enabled = True
+ 
+ .Folder = oMoveTarget
+ 
+ End With
+ 
+ colRules.Save
+                
             End If
         Next j
     Next i
@@ -71,14 +106,9 @@ Public Sub SetDomain()
 CleanUp:
     Set olItems = Nothing
     Set olItem = Nothing
-
         
 End If
   Next
-
-
-  
-
 End Sub
 
 
