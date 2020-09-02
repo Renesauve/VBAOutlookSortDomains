@@ -54,7 +54,7 @@ Public Sub SetDomain()
   If objProp = "gmail.com" Or objProp = "hotmail.com" Or objProp = "yahoo.com" Or objProp = "shaw.ca" Or objProp = "aol.com" Or objProp = "telus.com" Then
     Else
   Set myNameSpace = myOlApp.GetNamespace("MAPI")
-  Set myRecipient = myNameSpace.CreateRecipient("<YOUR EMAIL OR SHARED MAILBOX HERE>")
+  Set myRecipient = myNameSpace.CreateRecipient("<TARGETED EMAIL HERE>")
   Set myFolder = myNameSpace.GetSharedDefaultFolder(myRecipient, olFolderInbox)
   Set myDomainFolder = myFolder.Folders.Add(objProp)
  
@@ -64,41 +64,56 @@ Public Sub SetDomain()
     Set myOlSel = currentExplorer.Selection
     Set olItems = Session.GetSharedDefaultFolder(myRecipient, olFolderInbox).Items
     
+
     For i = olItems.Count To 1 Step -1
         Set olItem = olItems(i)
         For j = 0 To UBound(vAddr)
             If LCase(olItem.SenderEmailAddress) = LCase(vAddr(j)) Then
                 olItem.Move Session.GetSharedDefaultFolder(myRecipient, olFolderInbox).Folders(strFolder)
-
-
- 
- Set oMoveTarget = myFolder.Folders(strDomain)
- Set colRules = Application.Session.DefaultStore.GetRules()
- Set oRule = colRules.Create(objProp + " " + "rule", olRuleReceive)
- Set oFromCondition = oRule.Conditions.From
-
- If oRule <> objProp Then Debug.Print "cats"
-    Else
- With oFromCondition
- .Enabled = True
- 
- .Recipients.Add (olItem.SenderEmailAddress)
- 
- .Recipients.ResolveAll
- 
- End With
- 
- Set oMoveRuleAction = oRule.Actions.MoveToFolder
- With oMoveRuleAction
- 
- .Enabled = True
- 
- .Folder = oMoveTarget
- 
- End With
- 
- colRules.Save
                 
+                
+
+        
+        Dim RulesNames As Object
+        Set RulesNames = colRules.Item((strDomain + " " + "rule"))
+        
+        
+       For Each RulesNames In colRules
+        
+        If (RulesNames <> (strDomain + " " + "rule")) Then
+        Set oMoveTarget = myFolder.Folders(strDomain)
+        Set colRules = Application.Session.DefaultStore.GetRules()
+        Set oRule = colRules.Create(objProp + " " + "rule", olRuleReceive)
+
+         Set oFromCondition = oRule.Conditions.From
+         With oFromCondition
+         .Enabled = True
+         
+         .Recipients.Add (olItem.SenderEmailAddress)
+         
+         .Recipients.ResolveAll
+         
+         End With
+         
+         Set oMoveRuleAction = oRule.Actions.MoveToFolder
+         
+         With oMoveRuleAction
+         
+         .Enabled = True
+         
+         .Folder = oMoveTarget
+         
+         End With
+         
+            Debug.Print "Yay"
+        colRules.Save
+         Else
+            Debug.Print "Failed"
+
+                 End If
+             Next
+                 
+           
             End If
         Next j
     Next i
@@ -106,17 +121,3 @@ Public Sub SetDomain()
 CleanUp:
     Set olItems = Nothing
     Set olItem = Nothing
-        
-End If
-  Next
-End Sub
-
-
-
-
-
-
-
-
-
-
